@@ -29,11 +29,10 @@ module.exports = {
       {
         test: /\.(sa|sc|c)ss$/,
         use: [
+          MiniCssExtractPlugin.loader,
           {
-            loader: MiniCssExtractPlugin.loader
-          },
-          {
-            loader: "css-loader",
+            loader:
+              "css-loader?localIdentName=[path]__[name]__[local]___[hash:base64:5]",
             options: {
               sourceMap: true
             }
@@ -41,8 +40,7 @@ module.exports = {
           {
             loader: "postcss-loader",
             options: {
-              sourceMap: true,
-              sourceMapContents: true
+              ident: "postcss"
             }
           },
           {
@@ -51,7 +49,8 @@ module.exports = {
               implementation: require("sass")
             }
           }
-        ]
+        ],
+        exclude: /node_modules/
       },
       {
         test: /\.(png|jpe?g|gif|svg)$/,
