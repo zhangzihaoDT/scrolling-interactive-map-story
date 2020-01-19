@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta name="title" content="DT财经">
+  <meta name="description" content="用数据度量商业 让数据自由跨界">
+  <meta name="keywords" content="DT财经,DT一财,数据财经,数据新闻,商业数据,数据报告,消费升级,消费数据,DTcaijing,数据新媒体,CBNData">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <link rel="shortcut icon" href="//assets.cbndata.org/dt-web-pc/0.1.0/static/favicon.png?213" type="image/x-icon">
+  <link rel="apple-touch-icon" href="//assets.cbndata.org/dt-web-pc/0.1.0/static/favicon.png?213" />
+  <title>Data visualization|DT</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css">
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v1.1.1/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v1.1.1/mapbox-gl.css" rel="stylesheet" />
+  <script src="lib/turf@5.1.6.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@5.9.2/dist/d3.min.js"></script>
+  <script src="lib/sankey.js"></script>
+  <script src="lib/intersection-observer.js"></script>
+  <script src="lib/stickyfill.min.js"></script>
+  <script src="lib/scrollama.min.js"></script>
+</head>
+<style>
+  .page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .bg {
+    display: block;
+    position: fixed;
+    width: 100vw;
+    height: 100vh;
+    top: 0;
+    left: 0;
+    background-image: url("images/sky.png"), linear-gradient(141deg,
+        #556073 0%,
+        #2f3542 60%,
+        #292d36 85%);
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    -moz-transition: 0.1s;
+    -o-transition: 0.1s;
+    -webkit-transition: 0.1s;
+    transition: 0.1s;
+    z-index: -1;
+  }
+
+  #map {
+    position: -webkit-sticky;
+    position: sticky;
+    width: 100%;
+    background-color: #3b3b3b;
+    z-index: 1;
+  }
+
+  .float-button {
+    position: fixed;
+    right: 10px;
+    bottom: 20px;
+    z-index: 2;
+    color: white !important;
+    text-align: center;
+  }
+
+  input[type="button"].float-button {
+    background-color: rgba(35, 212, 204, 0.7);
+    border-radius: 24px;
+    width: 50px;
+    height: 50px;
+    border: none;
+    padding: 0;
+  }
+
+  input[checked="release"].float-button {
+    background-color: rgba(35, 212, 204, 0.9);
+    padding: 0;
+  }
+
+  .Quick-navigation {
+    position: fixed;
+    z-index: 3;
+    bottom: 20px;
+    left: 10px;
+  }
+
+  .Quick-navigation-item {
+    color: rgba(255, 255, 255, 0.4);
+    text-decoration: none;
+    font-size: 1.3em;
+    transition: color 0.3s;
+    padding: 0.5em;
+  }
+
+  .Quick-navigation-item:hover,
+  .Quick-navigation-item.current {
+    color: #fff;
+    font-family: DIN-Bold;
+  }
+
+  #menu {
+    display: flex;
+    height: auto;
+  }
+
+  .session {
+    margin-bottom: 20px;
+  }
+
+  .photo {
+    height: 100vh;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+
+  video {
+    display: block;
+    position: fixed;
+    width: 100vw;
+    height: 100vh;
+    top: 0;
+    left: 0;
+    object-fit: cover;
+    background-size: cover;
+    -moz-transition: 0.1s;
+    -o-transition: 0.1s;
+    -webkit-transition: 0.1s;
+    transition: 0.1s;
+    z-index: -1;
+  }
+
+  #start {
+    position: absolute;
+    bottom: 0;
+    z-index: 1;
+  }
+
+  .photo .content {
+    margin: -10vh auto 20vh;
+    z-index: 1;
+  }
+
+  .logo {
+    margin: 0vh auto 15vh;
+    z-index: 1;
+  }
+
+  .logo img {
+    width: 80px;
+  }
+
+  .scrolly {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .footer {
+    background-color: #292d36;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  .footer-item {
+    flex: 1;
+    text-align: left;
+    margin: 32px;
+    color: #868e9e;
+  }
+
+  .illustration img {
+    width: 100%;
+    display: block;
+  }
+
+  .demo a {
+    z-index: 2;
+    display: inline-block;
+    -webkit-transform: translate(0, -50%);
+    transform: translate(0, -50%);
+    color: #fff;
+    font-family: DIN-Bold;
+    letter-spacing: .1em;
+    text-decoration: none;
+    transition: opacity .3s;
+    cursor: pointer;
+  }
+
+  .demo a:hover {
+    opacity: .5;
+  }
+
+
+
+  #start a {
+    padding-top: 60px;
+  }
+
+  #start a span {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 30px;
+    height: 50px;
+    margin-left: -15px;
+    border: 2px solid #fff;
+    border-radius: 50px;
+    box-sizing: border-box;
+  }
+
+  #start a span::before {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    content: '';
+    width: 6px;
+    height: 6px;
+    margin-left: -3px;
+    background-color: #fff;
+    border-radius: 100%;
+    -webkit-animation: sdb10 1s infinite;
+    animation: sdb10 1s infinite;
+    box-sizing: border-box;
+  }
+
+  @-webkit-keyframes sdb10 {
+    0% {
+      -webkit-transform: translate(0, 0);
+      opacity: 0;
+    }
+
+    40% {
+      opacity: 1;
+    }
+
+    80% {
+      -webkit-transform: translate(0, 20px);
+      opacity: 0;
+    }
+
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes sdb10 {
+    0% {
+      transform: translate(0, 0);
+      opacity: 0;
+    }
+
+    40% {
+      opacity: 1;
+    }
+
+    80% {
+      transform: translate(0, 20px);
+      opacity: 0;
+    }
+
+    100% {
+      opacity: 0;
+    }
+  }
+</style>
+
+<body>
+  <img style="position: fixed;left: -100000px;top: -100000px;"
+    src="https://d.dtcj.com/volat-economy/images/DT-logo-square.png" />
+  <div class="bg"></div>
+  <div class="page">
+    <video muted loop="loop">
+      <source src="./images/Pexels2252790.mp4" type="video/mp4" />
+    </video>
+    <section id="menu" class="full-page">
+      <div id="maskLoading" class="content">
+        <h1 style="text-align: center;">3万条航班数据背后，230座城市的天空之战</h1>
+        <div class="loader">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+        <h6>请稍等，全文加载时间约为8到15秒</h6>
+      </div>
+      <div class="photo">
+        <div class="logo">
+          <img src="./images/dt财经logo-02.png">
+        </div>
+        <div class="content">
+          <h1>3万条航班数据背后，230座城市的天空之战</h1>
+          <h4>
+            2018年，中国大陆已经有230个城市拥有定期通航的民航机场，全国全年的航空旅客总吞吐量超过12亿人次。随着北京大兴机场的建成通航、上海第三机场的规划，城市间的机场经济进入新一轮融合与竞争。站在城市研究的视角，机场吞吐量和航线通达情况一定程度上代表城市商旅活动的活跃度，进而与城市首位度和经济势能挂钩。
+            <br />通过机场的航线与客流数据，我们将尝试着描绘一个区域经济发展的立体图景，看城市及城市群如何吸纳和释放TA们强大的经济势能。
+            </4>
+        </div>
+        <div id="start" class="demo">
+          <a id="scrollDown"><span></span>滚动</a>
+        </div>
+
+      </div>
+    </section>
+    <section class="scrolly">
+      <nav class="Quick-navigation hidden">
+        <a id="data_step1" href="#capacity" class="Quick-navigation-item">1</a>
+        <a id="data_step2" href="#airlines" class="Quick-navigation-item">2</a>
+        <a id="data_step3" href="#centrality" class="Quick-navigation-item">3</a>
+        <a id="data_step4" href="#TOP30" class="Quick-navigation-item">4</a>
+        <a id="data_step5" href="#chinaEconomicZone" class="Quick-navigation-item">5</a>
+        <a id="data_step6" href="#china_xinan" class="Quick-navigation-item">6</a>
+        <a id="data_step7" href="#china_huazhongAndDongbei" class="Quick-navigation-item">7</a>
+        <a id="data_step8" href="#region_concat" class="Quick-navigation-item">8</a>
+        <div class="Scroll-progress-indicator"></div>
+      </nav>
+      <input class="float-button hidden" id="hideMap" type="button" name="toggle" value="fold" checked="checked" />
+      <div id="map"></div>
+      <article>
+        <div id="capacity" class="step" data-step="1">
+          <div class="content">
+            <h2>1.人口的聚集让城市出行需求不断扩大 </h2>
+            <p>
+              2009年至2018年十年间，中国新增了69个民航机场，旅客总吞吐量增长了1.6倍。<br />I2018年，全国吞吐量过千万人次的城市已经达到37个，而北京首都机场的旅客吞吐量终于突破1亿人次，成为继美国亚特兰大机场后，全球第二个旅客吞吐量过亿人次的机场。
+            </p>
+            <p>
+              当把全部机场吞吐量变化加上地理位置的考察后，我们发现增长是围绕城市群或者说机场群扎堆发生的，尽管所有机场都存在增长，但京津冀、长三角、珠三角和成渝城市群的优势越来越显著。
+            </p>
+          </div>
+          <div id="console">
+            <div class="session">
+              <h3> 2009年至2018年全年旅客增长</h3>
+              <!--创建一个图例-->
+              <h3> 图例 | 旅客人数（人次）</h3>
+              <div class="row colors"></div>
+              <div class="row labels">
+                <div class="label">200K</div>
+                <div class="label">1M</div>
+                <div class="label">10M</div>
+                <div class="label">20M</div>
+                <div class="label">50M</div>
+                <div class="label">1B</div>
+              </div>
+            </div>
+            <!--创建一个时间滑块-->
+            <div class="session" id="sliderbar">
+              <h2><label id="active-hour">2018</label>年</h2>
+              <input id="slider" class="custom" type="range" min="2009" max="2018" step="1" value="2018" />
+            </div>
+            <div id="histogram"></div>
+            <p class="remarks">
+              数据来源：
+              <a href="http://www.caac.gov.cn/XXGK/XXGK/index_172.html?fl=11">中国民航局</a>
+              <br />注：统计数据不包括港澳台。
+            </p>
+          </div>
+
+        </div>
+        <div id="airlines" class="step" data-step="2">
+          <div class="content">
+            <h2>2.2018中国城市航空网络</h2>
+            <p>
+              旅客吞吐量更多能表明商旅活动的活跃度，用来度量一个机场的枢纽程度却是不够的。要评估一个机场在这个网络中的重要程度，还需要回答这些问题：通过机场，一座城市连通了多少远方？与谁往来更加亲密？辐射势力范围有多大？
+            </p>
+            <br>
+            <p>
+              我们借用了网络分析（Network
+              Analysis）中的中心度概念。中心度考量网络中各个节点的重要程度和核心性，通过量化节点之间的关系计算得出。与此相对应，机场就是一个个节点，通过航线的交织联系形成了一个航空网络。我们综合考虑了2018年各机场间的航线数量、进港出港航班数量等数据，通过算法计算得到每个机场的中心度。中心度越大，表示机场在整个航空网络中的重要性更高、区域辐射能力更强，这些强势机场也就是整个航空网络中的枢纽。
+            </p>
+          </div>
+        </div>
+        <div id="centrality" class="step" data-step="3">
+          <div id="console">
+            <!--创建一个图例-->
+            <div class="session">
+              <h2>3.网络中心度</h2>
+              <div class="row colors"></div>
+              <div class="row labels">
+                <div class="label">0</div>
+                <div class="label">0.2</div>
+                <div class="label">0.4</div>
+                <div class="label">0.6</div>
+                <div class="label">0.8</div>
+                <div class="label">1.0</div>
+              </div>
+            </div>
+          </div>
+          <div class="content">
+            <p>
+              将所有机场的中心度投射到地图上，我们发现全国机场中心度分布呈现出东高西低、南高北低的特点，这倒与很多经济发展相关指标的表现相似。
+            </p>
+          </div>
+        </div>
+        <div id="TOP30" class="step" data-step="4">
+          <div class="content">
+            <h2>4.网络中心图TOP30排名</h2>
+            <p>
+              按照机场中心度对城市进行排名，TOP2依旧是北京与上海，西安跃居第3位，中心度与上海浦东机场相差无几，此外，西南3城依旧占据着较高的排位。值得注意的是，广州与深圳的中心度排名并不够靠前，这意味着，尽管商旅活动活跃程度领先，但是与其他区域的连通性或者说对其他区域的影响力，还不够高。
+            </p>
+            <p>在全国230个城市的机场中，中心度排至TOP 30的机场基本可认为是枢纽型机场。从枢纽机场的分布中，我们能看到城市与区域影响力更明显的特征。
+            </p>
+          </div>
+          <div id="console">
+            <div id="dviz-hbar"></div>
+            <p class="remarks">
+              数据来源:
+              <a href="https://data.variflight.com/">飞常准</a>
+              <br /> 注：本文的中心度主要指网络分析中的度中心性，通过全国机场在2018年全年航线数量和出港、入港的航班量等因素算法计算得到，用以衡量节点在网络中的重要程度。统计数据不包括港澳台。
+            </p>
+          </div>
+        </div>
+        <div id="chinaEconomicZone" class="step" data-step="5">
+          <div class="content">
+            <h2>5.长三角城市整体枢纽度强于京津冀</h2>
+            <p>
+              国家发改委在2017年提出京津冀、长三角、珠三角将在2025年形成三大世界级机场群。截至2018年，这三个机场群的发展特点日趋明显。<br />在航空网络里，长三角毋庸置疑是影响力最强城市群，京津冀的综合实力不及长三角，在区域比拼中势力次之。
+            </p>
+            <p>
+              作为一个共同体，长三角现在已经建成16个民用机场，其中有3个是最高级别的4F级机场。2018年，长三角机场群的总吞吐量达到2.29亿。 不管是机场总体数量、建设水平还是吞吐量规模，长三角都领先于另两大机场群。
+            </p>
+            <br />
+            <p>
+              从机场群的整体协同发展角度看，珠三角主要依靠广州白云机场和深圳宝安机场带动整个珠三角地区的对外联系，广州白云机场作为区域内的top机场占到总吞吐量的53%。上海浦东机场在长三角的吞吐量占比则更低，为32%。这保证了长三角各机场协同发展，内部差距不至于过大。而在京津冀，巨无霸的北京首都机场占到了整个机场群吞吐量的70%，其他机场并没有贡献出太多力量。
+            </p>
+          </div>
+        </div>
+        <div id="china_xinan" class="step" data-step="6">
+          <div class="content">
+            <h2>6.另一核心机场群则分布在西南</h2>
+            <p>
+              成都双流机场（第4名）与重庆江北机场（第5名）中心度排名超过了广州白云，另有昆明长水机场（第7名）与贵阳龙洞堡机场（第14名）也排名靠前。成都双流机场从2011年开始，吞吐量连续八年超过深圳宝安机场，并且在2015年超过了上海虹桥机场后，一直稳坐吞吐量第四的宝座。
+              <br />
+              中心度和吞吐量背后，这片土地在经济崛起的跑道上已开始加速，不仅坐拥得天独厚的旅游资源，近年成渝两地的商业交流、经济活动密集，对于人才的吸引力越来越强。
+            </p>
+          </div>
+        </div>
+        <div id="china_huazhongAndDongbei" class="step" data-step="7">
+          <div class="content">
+            <h2>7.中国中部和东北地区的机场竞争力较弱</h2>
+            <p>
+              和龙争虎斗的华东、华南、西南等地相比，华中和东北则有一种“热闹都是ta们的”的落寞。
+              <br />华中的长沙黄花机场（第12名）、郑州新郑机场（第13名）、武汉天河机场（第22名）都算是枢纽，但奈何实力比较平均，缺乏一个更显眼的区域领头者。不过，这与地理区位对航空的依赖度、发达的高铁分流等原因相关，也并不能就此绝对地说明华中失意。
+              <br />地理位置边角、高铁不够发达的东北，弱势却实在没有上述理由，枢纽机场在机场中心度TOP30中位列中下游，着实就是这些年发展的另一道缩影。
+            </p>
+          </div>
+        </div>
+        <div id="region_concat" class="step" data-step="8">
+          <div class="content">
+            <h2>8.全国7大地理区核心航空枢纽联通城市TOP10</h2>
+            <p>
+              透过城市群枢纽城市的联系动向，我们也大致窥见了几个城市群在航空网络上的互动轮廓。与枢纽城市群来往最亲密的，仍旧是枢纽城市群，京津冀、长三角、珠三角与成渝城市间联系颇密切，这一定程度上意味着几大核心城市群间紧密的商旅往来。再进一步在各城市群间区分下亲疏远近，除了前文提到的珠三角更爱上海，成渝东进的网络中，与长三角的关系并不如跟其他两个区域那般亲密。<br />如果以辐射更多区域枢纽城市作为评价一个区域机场航空势力的标准，那么华东地区与西南地区无疑是势力最为磅礴的，这与地理位置靠边、要求更多远距离出行或许有些关系。但同样有类似情况的华北与东北，尽管坐拥北京，与其他区域航空枢纽城市的整体连接也还是稀薄。
+            </p>
+          </div>
+          <div id="console">
+            <div class="row" id="filters">
+              <input id="all" type="button" name="toggle" value="TOP10" checked="checked" />
+              <input id="Beijing" type="button" name="toggle" value="北京" />
+              <input id="Shanghai" type="button" name="toggle" value="上海" />
+              <input id="Harbin" type="button" name="toggle" value="哈尔滨" />
+              <input id="Xi'an" type="button" name="toggle" value="西安" />
+              <input id="Changsha" type="button" name="toggle" value="长沙" />
+              <input id="Chengdu" type="button" name="toggle" value="成都" />
+              <input id="Guangzhou" type="button" name="toggle" value="广州" />
+            </div>
+            <div class="session">
+
+              <div id="sankey"></div>
+              <p class="remarks">
+                数据来源：
+                <a href="https://data.variflight.com/">飞常准</a>
+                <br />不包括香港，澳门和台湾。 线的粗细表示飞行的次数。
+              </p>
+            </div>
+          </div>
+        </div>
+        <div id="gloucester" class="step" data-step="9">
+          <div class="content">
+            <h2>9.结语</h2>
+            <p>说到这里，关于未来城市与区域竞争的格局，我们在航班数据中也窥见了一角。城市战争的格局已经多年没有太大变化，一线稳固，强二线城市蠢蠢欲动，排名上下间或有些浮动——这在航空网络格局中也是一样。
+              <br />但代表未来的区域竞争看起来还存在变数，长三角一超多强，集体作战的辐射势力、融合程度将给城市群等级提升带来一些期待；双雄并起的珠三角次之，在接入粤港澳大湾区后存在诸多可能；成渝双生集西部万千宠爱于一身，新产业、商业和旅游开发都存在潜力。<br />京津冀老生常谈的区域发展问题，在航线网络枢纽度中亦体现出来，即使拥有全国最强枢纽城市，但当谈及城市群整体能级时，战斗力往往难以爆表。
+              <br />可以肯定的是，城市群的竞争，正在越来越激烈。
+            </p>
+          </div>
+          <div id="console">
+            <div class="row" id="nav">
+              <input id="getback" type="button" name="toggle" value="返回首页" checked="checked" />
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+    <section class="footer">
+      <div class="footer-item footer-one">
+        <p>©上海第一财经数据科技有限公司 | 沪ICP备15026457号-5</p>
+      </div>
+    </section>
+
+  </div>
+  <script>
+    var check = false;
+    (function (a) {
+      if (
+        /(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino|android|ipad|playbook|silk/i.test(
+          a
+        ) ||
+        /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(
+          a.substr(0, 4)
+        )
+      )
+        check = true;
+    })(navigator.userAgent || navigator.vendor || window.opera);
+
+    if (!check) {
+      document.querySelector("video").play();
+    }
+
+  </script>
+  <script src="chart.js"></script>
+  <script src="main.js"></script>
+</body>
+
+</html>
